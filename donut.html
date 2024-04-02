@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>3D Rotating Torus</title>
+<style>
+  body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+  canvas { background-color: #FFF; /* Remove border here */ }
+</style>
+</head>
+<body>
+<canvas id="torusCanvas"></canvas>
+<script>
+// Configuration
+const thetaSpacing = 0.07;
+const phiSpacing = 0.02;
+const R1 = 1;
+const R2 = 2;
+const K2 = 5;
+const canvas = document.getElementById('torusCanvas');
+const ctx = canvas.getContext('2d');
+
+// Adjust canvas size
+const screenWidth = window.innerWidth / 2;
+const screenHeight = window.innerHeight / 2;
+canvas.width = screenWidth;
+canvas.height = screenHeight;
+
+// Calculate K1 based on canvas size
+const K1 = screenWidth * K2 * 3 / (8 * (R1 + R2));
+
+let A = 0; // Rotation around X-axis
+let B = 0; // Rotation around Z-axis
+
+function renderFrame() {
+  ctx.clearRect(0, 0, screenWidth, screenHeight); // Clear canvas
+  
+  // Draw each point of the torus
+  for (let theta = 0; theta < 2 * Math.PI; theta += thetaSpacing) {
+    for (let phi = 0; phi < 2 * Math.PI; phi += phiSpacing) {
+      const cosA = Math.cos(A), sinA = Math.sin(A),
+            cosB = Math.cos(B), sinB = Math.sin(B),
+            cosTheta = Math.cos(theta), sinTheta = Math.sin(theta),
+            cosPhi = Math.cos(phi), sinPhi = Math.sin(phi);
+
+      const circleX = R2 + R1 * cosTheta;
+      const circleY = R1 * sinTheta;
+
+      const x = circleX * (cosB * cosPhi + sinA * sinB * sinPhi) - circleY * cosA * sinB;
+      const y = circleX * (sinB * cosPhi - sinA * cosB * sinPhi) + circleY * cosA * cosB;
+      const z = K2 + cosA * circleX * sinPhi + circleY * sinA;
+      const ooz = 1 / z;  // "One over Z"
+      
+      const xp = Math.floor(screenWidth / 2 + K1 * ooz * x);
+      const yp = Math.floor(screenHeight / 2 - K1 * ooz * y);
+
+      // Draw point
+      ctx.fillText('o', xp, yp);
+    }
+  }
+  
+  // Update rotation angles for next frame
+  A += 0.07; // Increment rotation around X-axis
+  B += 0.03; // Increment rotation around Z-axis
+  
+  requestAnimationFrame(renderFrame); // Request next frame
+}
+
+// Set up font for drawing on canvas
+ctx.font = '10px monospace';
+ctx.fillStyle = 'black';
+
+renderFrame(); // Start rendering
+</script>
+</body>
+</html>
+

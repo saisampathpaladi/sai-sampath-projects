@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+
+        h1 {
+            margin: 0 0 20px;
+        }
+
+        .input-group {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        li.completed {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        button.delete-btn {
+            background-color: #dc3545;
+            padding: 5px 10px;
+            border-radius: 3px;
+        }
+
+        button.delete-btn:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>To-Do List</h1>
+        <div class="input-group">
+            <input type="text" id="new-task" placeholder="Add a new task">
+            <button id="add-task-btn">Add</button>
+        </div>
+        <ul id="task-list"></ul>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const taskInput = document.getElementById('new-task');
+            const addTaskBtn = document.getElementById('add-task-btn');
+            const taskList = document.getElementById('task-list');
+
+            // Function to add a new task
+            function addTask() {
+                const taskText = taskInput.value.trim();
+                if (taskText !== '') {
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `
+                        <span>${taskText}</span>
+                        <button class="delete-btn">Delete</button>
+                    `;
+                    taskList.appendChild(listItem);
+
+                    // Mark task as completed on click
+                    listItem.addEventListener('click', () => {
+                        listItem.classList.toggle('completed');
+                    });
+
+                    // Delete task on delete button click
+                    listItem.querySelector('.delete-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        taskList.removeChild(listItem);
+                    });
+
+                    taskInput.value = '';
+                }
+            }
+
+            // Add task on button click
+            addTaskBtn.addEventListener('click', addTask);
+
+            // Add task on enter key press
+            taskInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addTask();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

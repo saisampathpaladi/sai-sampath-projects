@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chess PvP</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        .title {
+            margin-top: 20px;
+            color: #333;
+        }
+        .board-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        table {
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        td {
+            width: 60px;
+            height: 60px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 24px;
+        }
+        .White {
+            background-color: #f9f9f9;
+        }
+        .Black {
+            background-color: #666;
+            color: #fff;
+        }
+        .piece-selected {
+            box-shadow: 0 0 10px yellow;
+        }
+        .modal-container {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            border: 1px solid #ccc;
+            padding: 20px;
+            z-index: 1000;
+        }
+        .modal {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .modal h2 {
+            margin-bottom: 10px;
+        }
+        .modal-btns button {
+            margin: 5px;
+            padding: 10px;
+            cursor: pointer;
+        }
+        .window-btns {
+            margin-top: 20px;
+        }
+        .window-btns button {
+            margin: 5px;
+            padding: 10px;
+            cursor: pointer;
+        }
+        .turn-indicator {
+            color: #333;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title">Simple Chess PvP</h1>
+    <div class="board-container">
+        <div class="turn-indicator" id="turnIndicator">Current turn: White</div>
+        <table id="chessBoard"></table>
+    </div>
+    <div class="window-btns">
+        <button class="btn-refresh" id="refreshBtn" onclick="refresh()">Refresh</button>
+        <button class="btn-undo" id="undoBtn" onclick="undo()">Undo</button>
+    </div>
+    <div class="modal-container" id="modalContainer">
+        <div class="modal">
+            <h2>Pawn Promotion</h2>
+            <hr />
+            <div class="modal-btns">
+                <button onclick="promotePawn('rook')">Rook</button>
+                <button onclick="promotePawn('knight')">Knight</button>
+                <button onclick="promotePawn('bishop')">Bishop</button>
+                <button onclick="promotePawn('queen')">Queen</button>
+            </div>
+            <button onclick="closeModal()">Close</button>
+        </div>
+    </div>
+    <script>
+        const chessBoard = document.getElementById("chessBoard");
+        const turnIndicator = document.getElementById("turnIndicator");
+        const modalContainer = document.getElementById("modalContainer");
+        let currentPlayer = "White";
+        let board = [];
+        let selectedPiece = null;
+        let history = [];
+
+        class Piece {
+            constructor(color, unicode, type) {
+                this.color = color;
+                this.unicode = unicode;
+                this.type = type;
+            }
+        }
+
+        function initializeBoard() {
+            board = [];
+            for (let i = 0; i < 8; i++) {
+                board[i] = [];
+                for (let j = 0; j < 8; j++) {
+                    if (i === 1) board[i][j] = new Piece("Black", "\u265F", "pawn");
+                    else if (i === 6) board[i][j] = new Piece("White", "\u2659", "pawn");
+                    else if (i === 0 || i === 7) {
+                        const color = i === 0 ? "Black" : "White";
+                        if (j === 0 || j === 7) board[i][j] = new Piece(color, color === "White" ? "\u2656" : "\u265C", "rook");
+                        else if (j === 1 || j === 6) board[i][j] = new Piece(color, color === "White" ? "\u2658" : "\u265E", "knight");
+                        else if (j === 2 || j === 5) board[i][j] = new Piece(color, color === "White" ? "\u2657" : "\u265D", "bishop");
+                        else if (j === 3) board[i][j] = new Piece(color, color === "White" ? "\u2655" : "\u265B", "queen");
+                        else if (j === 4) board[i][j] = new Piece(color, color === "White" ? "\u2654" : "\u265A", "king");
+                    } else {
+                        board[i][j] = new Piece("", "", "");
+                    }
+                }
+            }
+            history = [JSON.parse(JSON.stringify(board))];
+            updateBoard();
+        }
+
+        function updateBoard() {
+            while (chessBoard.firstChild) {
+                chessBoard.removeChild(chessBoard.firstChild);
+            }
+            for (let i = 0; i < 8; i++) {
+                const row = chessBoard.insertRow();
+                for (let j = 0; j < 8; j++) {
+                    const cell = row.insertCell();
+                    cell.className = (i + j) % 2 === 0 ? "White" : "Black";
+                    cell.textContent = board[i][j].unicode;
+                    cell.addEventListener("click", () => handleCellClick(i, j));
+                }
+            }
+        }
+
+        function handleCellClick(row, col) {
+            if (selectedPiece) {
+                if (board[row][col].color === currentPlayer) {
+                    selectedPiece = { row, col };
+                } else if (isValidMove(selectedPiece.row, selectedPiece.col, row, col)) {
+                    movePiece(selectedPiece.row, selectedPiece.col, row, col);
+                    selectedPiece = null;
+                }
+            } else {
+                if (board[row][col].color === currentPlayer) {
+                    selectedPiece = { row, col };
+                }
+            }
+            updateBoard();
+        }
+
+        function movePiece(fromRow, fromCol, toRow, toCol) {
+            board[toRow][toCol] = board[fromRow][fromCol];
+            board[fromRow][fromCol] = new Piece("", "", "");
+            currentPlayer = currentPlayer === "White" ? "Black" : "White";
+            turnIndicator.textContent = `Current turn: ${currentPlayer}`;
+            history.push(JSON.parse(JSON.stringify(board)));
+            if ((toRow === 0 || toRow === 7) && board[toRow][toCol].type === "pawn") {
+                showModal();
+            }
+        }
+
+        function isValidMove(fromRow, fromCol, toRow, toCol) {
+            const piece = board[fromRow][fromCol];
+            const target = board[toRow][toCol];
+
+            if (piece.color === target.color) return false;
+
+            switch (piece.type) {
+                case 'pawn':
+                    return isValidPawnMove(fromRow, fromCol, toRow, toCol, piece.color);
+                case 'rook':
+                    return isValidRookMove(fromRow, fromCol, toRow, toCol);
+                case 'knight':
+                    return isValidKnightMove(fromRow, fromCol, toRow, toCol);
+                case 'bishop':
+                    return isValidBishopMove(fromRow, fromCol, toRow, toCol);
+                case 'queen':
+                    return isValidQueenMove(fromRow, fromCol, toRow, toCol);
+                case 'king':
+                    return isValidKingMove(fromRow, fromCol, toRow, toCol);
+                default:
+                    return false;
+            }
+        }
+
+        function isValidPawnMove(fromRow, fromCol, toRow, toCol, color) {
+            const direction = color === 'White' ? -1 : 1;
+            const startRow = color === 'White' ? 6 : 1;
+
+            if (fromCol === toCol) {
+                if (toRow === fromRow + direction && !board[toRow][toCol].unicode) {
+                    return true;
+                } else if (fromRow === startRow && toRow === fromRow + 2 * direction && !board[toRow][toCol].unicode && !board[fromRow + direction][fromCol].unicode) {
+                    return true;
+                }
+            } else if (Math.abs(fromCol - toCol) === 1 && toRow === fromRow + direction && board[toRow][toCol].unicode) {
+                return true;
+            }
+
+            return false;
+        }
+
+        function isValidRookMove(fromRow, fromCol, toRow, toCol) {
+            if (fromRow !== toRow && fromCol !== toCol) return false;
+            return isPathClear(fromRow, fromCol, toRow, toCol);
+        }
+
+        function isValidKnightMove(fromRow, fromCol, toRow, toCol) {
+            const rowDiff = Math.abs(fromRow - toRow);
+            const colDiff = Math.abs(fromCol - toCol);
+            return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
+        }
+
+        function isValidBishopMove(fromRow, fromCol, toRow, toCol) {
+            if (Math.abs(fromRow - toRow) !== Math.abs(fromCol - toCol)) return false;
+            return isPathClear(fromRow, fromCol, toRow, toCol);
+        }
+
+        function isValidQueenMove(fromRow, fromCol, toRow, toCol) {
+            if (fromRow === toRow || fromCol === toCol) {
+                return isPathClear(fromRow, fromCol, toRow, toCol);
+            }
+            if (Math.abs(fromRow - toRow) === Math.abs(fromCol - toCol)) {
+                return isPathClear(fromRow, fromCol, toRow, toCol);
+            }
+            return false;
+        }
+
+        function isValidKingMove(fromRow, fromCol, toRow, toCol) {
+            const rowDiff = Math.abs(fromRow - toRow);
+            const colDiff = Math.abs(fromCol - toCol);
+            return (rowDiff <= 1 && colDiff <= 1);
+        }
+
+        function isPathClear(fromRow, fromCol, toRow, toCol) {
+            const rowStep = Math.sign(toRow - fromRow);
+            const colStep = Math.sign(toCol - fromCol);
+
+            let currentRow = fromRow + rowStep;
+            let currentCol = fromCol + colStep;
+
+            while (currentRow !== toRow || currentCol !== toCol) {
+                if (board[currentRow][currentCol].unicode) return false;
+                currentRow += rowStep;
+                currentCol += colStep;
+            }
+
+            return true;
+        }
+
+        function refresh() {
+            initializeBoard();
+            currentPlayer = "White";
+            turnIndicator.textContent = `Current turn: ${currentPlayer}`;
+        }
+
+        function undo() {
+            if (history.length > 1) {
+                history.pop();
+                board = JSON.parse(JSON.stringify(history[history.length - 1]));
+                currentPlayer = currentPlayer === "White" ? "Black" : "White";
+                turnIndicator.textContent = `Current turn: ${currentPlayer}`;
+                updateBoard();
+            }
+        }
+
+        function showModal() {
+            modalContainer.style.display = 'block';
+        }
+
+        function closeModal() {
+            modalContainer.style.display = 'none';
+        }
+
+        function promotePawn(newType) {
+            // Add pawn promotion logic here
+            closeModal();
+            updateBoard();
+        }
+
+        initializeBoard();
+    </script>
+</body>
+</html>

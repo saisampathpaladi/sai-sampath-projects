@@ -1,4 +1,4 @@
 ### Hi there 👋
- this code has some bugs like balls some times ball does not want to change colors but I am working on them
+"Live DevOps Journey: Aspiring Engineer's Path to Mastery 🚀 | Hands-On Learning &amp; Q&amp;A"
  
 

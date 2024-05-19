@@ -9,6 +9,7 @@ provider "aws" {
 resource "random_string" "suffix" {
   length  = 8
   special = false
+  upper   = false
 }
 
 # Define local variables
@@ -19,7 +20,6 @@ locals {
 # Create an S3 bucket
 resource "aws_s3_bucket" "website_bucket" {
   bucket = local.bucket_name
-  acl    = "public-read"
 
   # Enable static website hosting
   website {
@@ -28,20 +28,39 @@ resource "aws_s3_bucket" "website_bucket" {
   }
 }
 
+# Configure bucket ownership controls
+resource "aws_s3_bucket_ownership_controls" "website_bucket" {
+  bucket = aws_s3_bucket.website_bucket.id
+
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+}
+
+# Configure public access block settings
+resource "aws_s3_bucket_public_access_block" "website_bucket" {
+  bucket = aws_s3_bucket.website_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = false
+  ignore_public_acls      = true
+  restrict_public_buckets = false
+}
+
 # Upload index.html file
 resource "aws_s3_bucket_object" "index" {
   bucket = aws_s3_bucket.website_bucket.bucket
   key    = "index.html"
-  source = "path/to/your/index.html" # Replace with the path to your index.html file
-  acl    = "public-read"
+  source = "path:\\Users\\terraform-projects\\terraform_static_web hosting S3 buckets\\index.html" # Replace with the path to your index.html file
+  content_type = "text/html"
 }
 
 # Upload error.html file
 resource "aws_s3_bucket_object" "error" {
   bucket = aws_s3_bucket.website_bucket.bucket
   key    = "error.html"
-  source = "path/to/your/error.html" # Replace with the path to your error.html file
-  acl    = "public-read"
+  source = "path:\\Users\\terraform-projects\\terraform_static_web hosting S3 buckets\\error.html" # Replace with the path to your error.html file
+  content_type = "text/html"
 }
 
 # Output the website URL

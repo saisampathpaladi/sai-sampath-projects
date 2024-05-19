@@ -1,5 +1,5 @@
 ### Hi there 👋
-"Live DevOps Journey: Aspiring Engineer's Path to Mastery 🚀 
+Live DevOps Journey: Aspiring Engineer's Path to Mastery 🚀 
 
 these projects are free to use (Non-Commercial Use Only)
 

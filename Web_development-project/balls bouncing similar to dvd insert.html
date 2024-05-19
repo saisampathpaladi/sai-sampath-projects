@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bouncing Ball</title>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: black;
+    overflow: hidden;
+  }
+
+  #ball {
+    width: 50px;
+    height: 50px;
+    background-color: blue; /* Initial color */
+    border-radius: 50%;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+  }
+</style>
+</head>
+<body>
+<div id="ball" onclick="pauseResume()"></div>
+<script>
+  var step = 5;
+  var delay = 30;
+  var height = window.innerHeight;
+  var width = window.innerWidth;
+  var yPos = 20;
+  var xPos = 20;
+  var yon = 0;
+  var xon = 0;
+  var pause = true;
+  var interval;
+  var ball = document.getElementById('ball');
+
+  function changePos() {
+    if (yon) {
+      yPos = yPos + step;
+    } else {
+      yPos = yPos - step;
+    }
+
+    if (yPos < 0) {
+      yon = 1;
+      yPos = 0;
+      ball.style.backgroundColor = getRandomColor();
+    }
+
+    if (yPos >= (height - ball.offsetHeight)) {
+      yon = 0;
+      yPos = (height - ball.offsetHeight);
+      ball.style.backgroundColor = getRandomColor();
+    }
+
+    if (xon) {
+      xPos = xPos + step;
+    } else {
+      xPos = xPos - step;
+    }
+
+    if (xPos < 0) {
+      xon = 1;
+      xPos = 0;
+      ball.style.backgroundColor = getRandomColor();
+    }
+
+    if (xPos >= (width - ball.offsetWidth)) {
+      xon = 0;
+      xPos = (width - ball.offsetWidth);
+      ball.style.backgroundColor = getRandomColor();
+    }
+
+    ball.style.top = yPos + 'px';
+    ball.style.left = xPos + 'px';
+  }
+
+  function start() {
+    interval = setInterval(changePos, delay);
+  }
+
+  function pauseResume() {
+    if (pause) {
+      interval = setInterval(changePos, delay);
+      pause = false;
+    } else {
+      clearInterval(interval);
+      pause = true;
+    }
+  }
+
+  function getRandomColor() {
+    var colors = ['blue', 'red', 'green', 'white'];
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  start();
+</script>
+</body>
+</html>
+

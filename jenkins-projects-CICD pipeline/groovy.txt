@@ -1,0 +1,85 @@
+pipeline {
+    agent any
+
+    environment {
+        REPO_URL = 'https://github.com/your-username/your-todo-list-app.git'
+        DOCKER_IMAGE = 'your-dockerhub-username/todo-list-app'
+        DOCKER_CREDENTIALS_ID = 'your-docker-credentials-id'
+        KUBECONFIG_CREDENTIALS_ID = 'your-kubeconfig-credentials-id' // Jenkins credentials ID for Kubeconfig
+        KUBERNETES_DEPLOYMENT_NAME = 'todo-list-app-deployment'
+        KUBERNETES_NAMESPACE = 'default' // change if you use a different namespace
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: "${REPO_URL}"
+            }
+        }
+
+        stage('Build') {
+            steps {
+                script {
+                    // Assuming a Node.js application, adjust build steps as needed
+                    sh 'npm install'
+                    sh 'npm run build'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                script {
+                    // Assuming a Node.js application, adjust test steps as needed
+                    sh 'npm test'
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                script {
+                    // Build the Docker image
+                    sh "docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} ."
+                }
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                script {
+                    // Login to Docker Hub
+                    withCredentials([string(credentialsId: "${DOCKER_CREDENTIALS_ID}", variable: 'DOCKER_PASSWORD')]) {
+                        sh 'echo $DOCKER_PASSWORD | docker login -u your-dockerhub-username --password-stdin'
+                    }
+                    // Push the Docker image
+                    sh "docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}"
+                }
+            }
+        }
+
+        stage('Deploy to EKS') {
+            steps {
+                script {
+                    // Use the kubeconfig credentials to interact with EKS
+                    withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS_ID}", variable: 'KUBECONFIG')]) {
+                        // Update the deployment with the new image
+                        sh """
+                        kubectl --kubeconfig=$KUBECONFIG set image deployment/${KUBERNETES_DEPLOYMENT_NAME} ${KUBERNETES_DEPLOYMENT_NAME}=${DOCKER_IMAGE}:${BUILD_NUMBER} -n ${KUBERNETES_NAMESPACE}
+                        kubectl --kubeconfig=$KUBECONFIG rollout status deployment/${KUBERNETES_DEPLOYMENT_NAME} -n ${KUBERNETES_NAMESPACE}
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}

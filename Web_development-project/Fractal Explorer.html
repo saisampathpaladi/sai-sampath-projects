@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fractal Explorer</title>
+<style>
+body {
+    margin: 0;
+    background: #000;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+/* Top bar */
+#topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #111;
+    padding: 10px;
+    box-sizing: border-box;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    z-index: 10;
+}
+
+#controls {
+    display: none;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+#controls.show {
+    display: flex;
+}
+
+label {
+    font-size: 12px;
+}
+
+input, select, button {
+    padding: 4px;
+}
+
+canvas {
+    display: block;
+}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+    <button id="toggleBtn">Controls</button>
+
+    <div id="controls">
+        <select id="preset">
+            <option value="mandelbrot">Mandelbrot</option>
+            <option value="julia">Julia</option>
+            <option value="burning">Burning Ship</option>
+        </select>
+
+        <input id="equation" size="40"
+        value="z = {x: z.x*z.x - z.y*z.y + c.x, y: 2*z.x*z.y + c.y}">
+
+        <label>Iter</label>
+        <input type="range" id="iter" min="50" max="1000" value="200">
+
+        <label>Outline</label>
+        <input type="range" id="outline" min="0" max="10" value="2">
+
+        <button onclick="cyclePalette()">Colors</button>
+        <button onclick="render()">Render</button>
+    </div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.onresize = resize;
+resize();
+
+/* Toggle controls */
+document.getElementById("toggleBtn").onclick = () => {
+    document.getElementById("controls").classList.toggle("show");
+};
+
+/* Color palettes */
+const palettes = [
+    [[255,255,255],[255,105,180]],
+    [[255,165,0],[0,0,255]],
+    [[0,255,255],[255,0,0]],
+    [[0,255,0],[255,0,255]],
+    [[255,255,0],[0,0,128]]
+];
+
+let paletteIndex = 0;
+
+function cyclePalette() {
+    paletteIndex = (paletteIndex + 1) % palettes.length;
+    render();
+}
+
+function lerp(a, b, t) {
+    return a + (b - a) * t;
+}
+
+function getColor(t) {
+    const p = palettes[paletteIndex];
+    return [
+        lerp(p[0][0], p[1][0], t),
+        lerp(p[0][1], p[1][1], t),
+        lerp(p[0][2], p[1][2], t)
+    ];
+}
+
+function complexAbs(z) {
+    return Math.sqrt(z.x*z.x + z.y*z.y);
+}
+
+function render() {
+    const w = canvas.width;
+    const h = canvas.height;
+    const img = ctx.createImageData(w, h);
+
+    const maxIter = +document.getElementById("iter").value;
+    const outline = +document.getElementById("outline").value;
+    const preset = document.getElementById("preset").value;
+    const eq = document.getElementById("equation").value;
+
+    let func;
+    try {
+        func = new Function("z","c", eq + "; return z;");
+    } catch {
+        return;
+    }
+
+    for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) {
+
+            let zx = (x - w/2) / (w/4);
+            let zy = (y - h/2) / (h/4);
+
+            let z = {x:0,y:0};
+            let c = {x:zx,y:zy};
+
+            if (preset === "julia") {
+                z = {x:zx,y:zy};
+                c = {x:-0.7,y:0.27015};
+            }
+
+            let i = 0;
+
+            while (i < maxIter && complexAbs(z) <= 2) {
+                if (preset === "burning") {
+                    z.x = Math.abs(z.x);
+                    z.y = Math.abs(z.y);
+                }
+                z = func(z,c);
+                i++;
+            }
+
+            const idx = (y*w + x)*4;
+            let t = i / maxIter;
+
+            let [r,g,b] = getColor(t);
+
+            if (i === maxIter) r = g = b = 0;
+
+            let edge = Math.abs(Math.sin(t * outline * Math.PI));
+
+            img.data[idx] = r * edge;
+            img.data[idx+1] = g * edge;
+            img.data[idx+2] = b * edge;
+            img.data[idx+3] = 255;
+        }
+    }
+
+    ctx.putImageData(img,0,0);
+}
+
+render();
+</script>
+
+</body>
+</html>
